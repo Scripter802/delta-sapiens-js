@@ -1,3 +1,5 @@
+var isMobile;
+
 const suggestionData = [
     {
         categoryTitle: 'Poslovna strategija i razvoj',
@@ -57,6 +59,7 @@ const suggestionData = [
 ];
 
 document.addEventListener('DOMContentLoaded', function() {
+    isMobile = window.innerWidth <= 768;
     renderSuggestions();
 });
 
