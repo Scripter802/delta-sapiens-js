@@ -73,12 +73,13 @@ function shuffleArray(array) {
 function renderSuggestions() {
     var suggStack;
 
+
     if (isMobile) {
-    console.log("MOBILE");
-    suggStack = $('#suggStack2');
-} else {
-    suggStack = $('#suggStack');
-}
+        console.log("MOBILE");
+        suggStack = document.getElementById('suggStack2');
+    } else {
+        suggStack = document.getElementById('suggStack');
+    }
 
     var suggStackSuggSpots = suggStack.children;
 
