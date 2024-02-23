@@ -61,6 +61,7 @@ const suggestionData = [
 document.addEventListener('DOMContentLoaded', function() {
     isMobile = window.innerWidth <= 768;
     renderSuggestions();
+    Suggestions();
 });
 
 function shuffleArray(array) {
@@ -72,7 +73,6 @@ function shuffleArray(array) {
 
 function renderSuggestions() {
     var suggStack;
-
 
     if (isMobile) {
         console.log("MOBILE");
@@ -87,7 +87,7 @@ function renderSuggestions() {
     let categories = suggestionData.slice(0, 5);
     shuffleArray(categories);
     // Add the "Razno" category at the end
-    categories.push(suggestionData[5]);
+    categories.push(suggestionData.find(category => category.categoryTitle === 'Razno'));
 
     for (var suggIndex = 0; suggIndex < suggStackSuggSpots.length; suggIndex++) {
         var categoryDiv = suggStackSuggSpots[suggIndex];
@@ -113,3 +113,28 @@ function renderSuggestions() {
     }
 }
 
+
+function Suggestions() {
+    suggestionButtons = document.querySelectorAll('.suggestionbutton');
+    suggestionButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+
+            const value = this.dataset.value;
+            chatInput.value = value; 
+            submitButton.children[0].src = submitBtn_orangeBck;
+
+            chatInput.style.height = 'auto';
+            chatInput.style.height = chatInput.scrollHeight + 'px';
+
+            if (this.classList.contains('active')) {
+                this.classList.remove('active');
+                chatInput.value = null;
+                submitButton.children[0].src = submitBtn_grayBck;
+            } else {
+                suggestionButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+            }
+            
+        });
+    });
+}
