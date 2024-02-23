@@ -1,0 +1,444 @@
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script>
+
+let serverURL = 'https://delta-sapiens-backend-kgadbyj3ca-uc.a.run.app/';
+let threadId = '';
+let isUserScrolling = false;
+let isTyping = false;
+var numOfMessages = 0;
+var lastMessage = "";
+var suggestionButtons;
+var chatInput = $("#chatInput");
+var submitButton = $("#submitButton");
+var chatOutput = $("#chatOutput");
+var newChatBtn = $("#newChatBtn");
+var newChatBtn_M = $("#newChatBtn_M");
+var submitBtn_grayBck = 'https://uploads-ssl.webflow.com/65ad1866ca4e4a4ade2f9348/65ca0e43d1ee28d616bcbe6b_grayButton.png'
+var submitBtn_orangeBck = 'https://uploads-ssl.webflow.com/65ad1866ca4e4a4ade2f9348/65ca0e4308c7b617525527dd_orangeButton.png'
+chatInput.disabled = true;
+var defaultInputHeight;
+var isMobile;
+var isNewChatDisabled;
+
+const suggestionData = [
+    {
+        categoryTitle: 'Poslovna strategija i razvoj',
+        options: [
+            { title: 'Ključne strategije za održivi rast', value: 'Koje su ključne strategije koje Delta Holding koristi za postizanje održivog rasta?' },
+            { title: 'Adaptacija na digitalnu transformaciju', value: 'Kako kompanija planira da se adaptira na digitalnu transformaciju u svojim operacijama?' },
+            { title: 'Trenutni investicioni projekti', value: 'Koji su trenutni investicioni projekti Delta Holdinga i kako oni doprinose ukupnoj strategiji kompanije?' },
+            { title: 'Unapređenje korporativne društvene odgovornosti', value: 'Na koji način Delta Holding planira da unapredi svoju korporativnu društvenu odgovornost i održivost u budućnosti?' }
+        ]
+    },
+    {
+        categoryTitle: 'Finansije',
+        options: [
+            { title: 'Upravljanje finansijskim rizicima', value: 'Koje metode Delta Holding koristi za upravljanje finansijskim rizicima?' },
+            { title: 'Optimizacija poreske strategije', value: 'Na koji način Delta Holding optimizuje svoju poresku strategiju?' },
+            { title: 'Finansijska analiza u donošenju odluka', value: 'Kako Delta Holding koristi finansijsku analizu za donošenje poslovnih odluka?' },
+            { title: 'Izvori finansiranja i pristup novim mogućnostima', value: 'Koji su glavni izvori finansiranja za Delta Holding i kako se pristupa novim mogućnostima finansiranja?' }
+        ]
+    },
+    {
+        categoryTitle: 'Ljudski resursi i razvoj talenata',
+        options: [
+            { title: 'Filozofija upravljanja talentima', value: 'Kakva je filozofija Delta Holdinga po pitanju upravljanja talentima?' },
+            { title: 'Razvoj liderstva', value: 'Kako Delta Holding pristupa razvoju liderstva unutar organizacije?' },
+            { title: 'Merenje i unapređenje zadovoljstva zaposlenih', value: 'Na koji način se meri i unapređuje zadovoljstvo i angažovanost zaposlenih u Delta Holdingu?' },
+            { title: 'Korišćenje tehnologije u upravljanju ljudskim resursima', value: 'Kako Delta Holding koristi tehnologiju i digitalne alate u upravljanju ljudskim resursima?' }
+        ]
+    },
+    {
+        categoryTitle: 'Održivost i društvena odgovornost (ESG)',
+        options: [
+            { title: 'Merenje uticaja na životnu sredinu', value: 'Na koji način Delta Holding meri svoj uticaj na životnu sredinu i prati napredak u održivosti?' },
+            { title: 'Podsticanje društvene odgovornosti', value: 'Na koji način Delta Holding podstiče društvenu odgovornost i uključenost u zajednici?' },
+            { title: 'Uključivanje stakeholdera u ESG inicijative', value: 'Kako kompanija uključuje stakeholdere u svoje ESG inicijative?' },
+            { title: 'Doprinos ciljevima održivog razvoja UN', value: 'Kakav je doprinos Delta Holdinga ciljevima održivog razvoja Ujedinjenih nacija?' }
+        ]
+    },
+    {
+        categoryTitle: 'Informacione tehnologije i digitalizacija',
+        options: [
+            { title: 'Korišćenje digitalnih platformi', value: 'Koje digitalne platforme i alate Delta Holding koristi za unapređenje svojih poslovnih operacija?' },
+            { title: 'Adaptacija na IT trendove', value: 'Na koji način se Delta Holding adaptira na najnovije IT trendove i tehnologije?' },
+            { title: 'Mere za osiguranje sajber sigurnosti', value: 'Koje mere Delta Holding preduzima za osiguranje sajber sigurnosti?' },
+            { title: 'Integracija veštačke inteligencije', value: 'Na koji način Delta Holding integriše veštačku inteligenciju (AI) i mašinsko učenje u svoje poslovne procese?' }
+        ]
+    },
+    {
+        categoryTitle: 'Razno',
+        options: [
+            { title: 'Ko si ti?', value: 'Ko si ti?' },
+            { title: 'Pomoć Delta Sapiensu', value: 'Kako ti kao Delta Sapiens možeš biti od pomoći Delta Holding zaposlenima?' },
+            { title: 'Novi slogan Delta Holdinga', value: 'Koji je novi Delta Holding slogan i koje je njegovo značenje?' },
+            { title: 'Smisao za humor', value: 'Da li ti imaš smisao za humor i ako imaš da li možeš da ga iskazeš?' },
+            { title: 'Percepcija drugih ljudi', value: 'Šta želiš da drugi ljudi misle o tebi?' }
+        ]
+    }
+];
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    isMobile = window.innerWidth <= 768;
+    renderSuggestions();
+    Suggestions();
+
+    chatInput.rows = 1;
+    chatInput.style.height = chatInput.scrollHeight + 'px';
+    defaultInputHeight = chatInput.style.height;
+    chatInput.style.maxHeight = (chatInput.scrollHeight + chatInput.scrollHeight / 2) + 'px';
+
+    fetch(`${serverURL}start`)
+        .then(response => response.json())
+        .then(data => {
+            threadId = data.thread_id; 
+            chatInput.disabled = false;
+        })
+        .catch(error => console.error('Error starting conversation:', error));
+
+    const chatOutputDiv = chatOutput;
+    chatOutputDiv.addEventListener('scroll', function() {
+        if (chatOutputDiv.scrollTop + chatOutputDiv.clientHeight < chatOutputDiv.scrollHeight) {
+            isUserScrolling = true;
+        } else {
+            isUserScrolling = false;
+        }
+    });
+
+    window.addEventListener('keydown', function(event) {
+        if (event.keyCode === 13) {
+            event.preventDefault();
+            ChatOps();
+        }
+    });
+
+
+    chatInput.addEventListener('input', function() {
+        if (chatInput.value.trim() !== '') {
+            submitButton.children[0].src = submitBtn_orangeBck;
+        } else {
+            submitButton.children[0].src = submitBtn_grayBck;
+        }
+    });
+
+});
+
+
+newChatBtn.addEventListener('click', function(event) {
+    NewChat(this);
+});
+
+newChatBtn_M.addEventListener('click', function(event) {
+    NewChat(this);
+});
+
+function NewChat(button){
+
+    if(isNewChatDisabled)
+    return;
+        
+    button.classList.add('pop-effect');
+    setTimeout(() => {
+        button.classList.remove('pop-effect');
+    }, 125);
+
+
+    resetInputHeight();
+    //RESET CHAT
+
+    isTyping = false;
+    chatInput.value = null;
+    chatOutput.innerHTML = null;
+    chatOutput.style.display = 'none'
+    $('#logo-section').css('display', 'flex');
+
+
+
+    if (isMobile) {
+    // Mobile
+    $('#suggestionSection2').css('display', 'flex');
+    } else {
+        $('#suggestionSection').css('display', 'flex');
+        $('#deltaText').css('display', 'block');
+    }
+
+
+    ClearSuggestions();
+
+}
+
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+function renderSuggestions() {
+    var suggStack;
+
+    if (isMobile) {
+    console.log("MOBILE");
+    suggStack = $('#suggStack2');
+} else {
+    suggStack = $('#suggStack');
+}
+
+    var suggStackSuggSpots = suggStack.children;
+
+    // Randomize the first five categories
+    let categories = suggestionData.slice(0, 5);
+    shuffleArray(categories);
+    // Add the "Razno" category at the end
+    categories.push(suggestionData[5]);
+
+    for (var suggIndex = 0; suggIndex < suggStackSuggSpots.length; suggIndex++) {
+        var categoryDiv = suggStackSuggSpots[suggIndex];
+        var category = categories[suggIndex];
+
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'suggestiontitle';
+        titleDiv.textContent = category.categoryTitle;
+        categoryDiv.appendChild(titleDiv);
+
+        category.options.forEach(option => {
+            const buttonDiv = document.createElement('div');
+            buttonDiv.className = 'suggestionbutton';
+
+            const textDiv = document.createElement('div');
+            textDiv.className = 'suggtxt';
+            textDiv.textContent = option.title;
+
+            buttonDiv.appendChild(textDiv);
+            buttonDiv.dataset.value = option.value;
+            categoryDiv.appendChild(buttonDiv);
+        });
+    }
+}
+
+function Suggestions() {
+    suggestionButtons = document.querySelectorAll('.suggestionbutton');
+    suggestionButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+
+            const value = this.dataset.value;
+            chatInput.value = value; 
+            submitButton.children[0].src = submitBtn_orangeBck;
+
+            chatInput.style.height = 'auto';
+            chatInput.style.height = chatInput.scrollHeight + 'px';
+
+            if (this.classList.contains('active')) {
+                this.classList.remove('active');
+                chatInput.value = null;
+                submitButton.children[0].src = submitBtn_grayBck;
+            } else {
+                suggestionButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+            }
+            
+        });
+    });
+}
+
+function ClearSuggestions(){
+    suggestionButtons = document.querySelectorAll('.suggestionbutton');
+    suggestionButtons.forEach(function(button) {
+        button.classList.remove('active');
+        chatInput.value = null;
+        submitButton.children[0].src = submitBtn_grayBck;
+    });
+}
+
+chatInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+});
+
+function resetInputHeight(){
+    chatInput.style.height = 'auto';
+    chatInput.style.height = defaultInputHeight;
+}
+
+
+submitButton.addEventListener('click', function(event) {
+    this.classList.add('pop-effect');
+    setTimeout(() => {
+        this.classList.remove('pop-effect');
+    }, 125);
+
+    if(chatInput.value.length != 0 && chatInput.value != " ")
+        ChatOps();
+    else return
+
+});
+
+function ChatOps(){
+    if (isTyping) {
+        return; 
+    }
+
+    resetInputHeight();
+    const message = chatInput.value; // Get the input value
+    isUserScrolling = false;
+
+
+const requestData = {
+    thread_id: threadId,
+    message: message
+};
+
+chatInput.value = '';
+
+const newUserBubble = `
+            <div class="chatboubble">
+                <div class="profileimg">
+                    <img src="https://uploads-ssl.webflow.com/65ad1866ca4e4a4ade2f9348/65b5454521078c5d2745c167_219988.png" loading="lazy" alt="" class="profimg">
+                </div>
+                <div class="textzone">
+                    <h1 class="botname">You</h1>
+                    <p class="responsecontent">${message}</p> <!-- Insert the response message here -->
+                </div>
+            </div>`;
+
+chatOutput.style.display = 'flex'
+chatOutput.innerHTML += newUserBubble
+
+$('#logo-section').css('display', 'none');
+$('#deltaText').css('display', 'none');
+$('#suggestionSection').css('display', 'none');
+$('#suggestionSection2').css('display', 'none');
+
+const AIoutputpreview = `
+            <div class="chatboubble grayOutput">
+                <div class="profileimg">
+                    <img src="https://assets-global.website-files.com/65ad1866ca4e4a4ade2f9348/65ad1a2f470ea4639ecfac20_orange_circle.svg" loading="lazy" alt="" class="profimg rotating">
+                </div>
+                <div class="textzone">
+                    <h1 class="botname">Delta Sapiens</h1>
+                    <p class="responsecontent">Delta Sapiens razmislja...</p> <!-- Insert the response message here -->
+                </div>
+            </div>`;
+
+chatOutput.innerHTML += AIoutputpreview
+isTyping = true;
+chatOutput.scrollTop = chatOutput.scrollHeight
+submitButton.children[0].src = submitBtn_grayBck;
+
+isNewChatDisabled = true;
+newChatBtn.style.opacity = 0.5;
+newChatBtn_M.style.opacity = 0.5;
+
+
+fetch(`${serverURL}chat`, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestData)
+})
+.then(response => {
+    const reader = response.body.getReader();
+    let charsReceived = 0;
+    var fullText = '';
+
+    var lastMessageElem = chatOutput.lastElementChild;
+
+    lastMessageElem.getElementsByClassName("responsecontent")[0].innerText = "";
+    lastMessageElem.getElementsByClassName("profimg")[0].classList.remove("rotating");
+
+    const processNextChunk = () => {
+        reader.read().then(({done, value}) => {
+            if (done) {
+                console.log("Stream complete");
+                isTyping = false;
+                chatInput.disabled = false;
+                submitButton.disabled = false;
+                
+                isNewChatDisabled = false;
+                newChatBtn.style.opacity = 1;
+                newChatBtn_M.style.opacity = 1;
+
+                fullText = fullText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+                const responseContent = lastMessageElem.getElementsByClassName("responsecontent")[0];
+                responseContent.innerText = null
+                responseContent.innerHTML += fullText;
+
+
+                var assistent_response = "";
+                assistent_response = fullText;
+
+                if(numOfMessages == 0){
+                    assistent_response = "";
+                    numOfMessages++;
+                }
+        
+                const requestData_addR = {
+                    thread_id: threadId,
+                    message: message,
+                    assistent_response: assistent_response
+                    };
+
+
+                    fetch(`${serverURL}add-response`, {
+                    method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData_addR)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                    console.log('Response from server:', data); 
+                    }).catch(error => console.error('Error sending message:', error));
+
+
+                return;
+            }
+
+
+            const chunkText = new TextDecoder().decode(value);
+            charsReceived += chunkText.length;
+            fullText += chunkText;
+
+
+            const responseContent = lastMessageElem.getElementsByClassName("responsecontent")[0];
+            responseContent.innerHTML += chunkText;
+
+
+            if (!isUserScrolling) {
+                chatOutput.scrollTop = chatOutput.scrollHeight;
+            }
+
+
+            processNextChunk();
+        });
+    };
+
+
+    processNextChunk();
+})
+.catch(error => console.error('Error while fetching the chat stream:', error));
+
+
+
+}
+
+</script>
+<script src="https://unpkg.com/popper.js@1"></script>
+<script src="https://unpkg.com/tippy.js@4"></script>
+<script>
+tippy('.tooltip', {        
+ animation: 'fade',    
+ duration: 200,      
+ arrow: true,          
+ delay: [0, 50],      
+ arrowType: 'sharp',  
+ theme: 'material',        
+ maxWidth: 220,    
+ interactive: true,
+})
+</script>
